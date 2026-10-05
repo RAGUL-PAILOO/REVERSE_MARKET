@@ -1,59 +1,48 @@
-
-import { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { NavLink } from "react-router-dom";
+import { getProjects } from "../services/projectApi";
 import "./ProjectsPage.css";
 
-const sampleProjects = [
-  {
-    id: 1,
-    name: "Real-Time Crypto Exchange Monitor",
-    budget: "₹60,000 – ₹1,20,000",
-    deadline: "30 Nov 2026",
-    proposals: 12,
-    status: "Open",
-    description:
-      "Build a secure dashboard that monitors crypto exchanges, displays live market indicators, and sends customizable alerts.",
-    rating: 4.8,
-    reviews: 24,
-  },
-  {
-    id: 2,
-    name: "Modern E-Commerce Website",
-    budget: "₹25,000 – ₹45,000",
-    deadline: "15 Nov 2026",
-    proposals: 8,
-    status: "In Progress",
-    description:
-      "Develop a responsive online store with product listings, search, shopping cart, and a simple checkout experience.",
-    rating: 4.5,
-    reviews: 16,
-  },
-  {
-    id: 3,
-    name: "Student Management System",
-    budget: "₹15,000 – ₹30,000",
-    deadline: "20 Dec 2026",
-    proposals: 0,
-    status: "Draft",
-    description:
-      "Create a student management platform for maintaining student records, attendance, and academic information.",
-    rating: 0,
-    reviews: 0,
-  },
-];
-
 function ProjectsPage() {
+  const [projects, setProjects] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [selectedProject, setSelectedProject] = useState(null);
 
-  const filteredProjects = sampleProjects.filter((project) => {
+  useEffect(() => {
+    async function loadProjects() {
+      const data = await getProjects();
+      const formattedData = data.map((p) => ({
+        id: p.project_id,
+        name: p.title,
+        userName: p.user_name,
+        category: p.category,
+        budget: `₹${Number(p.budget).toLocaleString("en-IN")}`,
+        deadline: new Date(p.deadline).toLocaleDateString("en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }),
+        status:
+          p.status.charAt(0).toUpperCase() +
+          p.status.slice(1).replace("_", " "),
+        description: p.description,
+      }));
+      setProjects(formattedData);
+    }
+
+    loadProjects();
+  }, []);
+
+  const filteredProjects = projects.filter((project) => {
     const matchesSearch =
       project.name.toLowerCase().includes(search.toLowerCase()) ||
-      project.description.toLowerCase().includes(search.toLowerCase());
+      project.description.toLowerCase().includes(search.toLowerCase()) ||
+      project.category.toLowerCase().includes(search.toLowerCase());
 
     const matchesStatus =
-      statusFilter === "All" || project.status === statusFilter;
+      statusFilter === "All" ||
+      project.status.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -78,10 +67,6 @@ function ProjectsPage() {
           <a href="/dashboard#requirements" className="sidebar-link">
             <span>☷</span> My Requirements
           </a>
-
-          
-
-          
 
           <NavLink to="/settings" className="sidebar-link">
             <span>⚙</span> Settings
@@ -173,7 +158,7 @@ function ProjectsPage() {
           <div className="project-results-heading">
             <strong>Available Projects</strong>
             <span>
-              Showing {filteredProjects.length} of {sampleProjects.length} projects
+              Showing {filteredProjects.length} of {projects.length} projects
             </span>
           </div>
 
@@ -183,9 +168,11 @@ function ProjectsPage() {
                 <div className="project-listing-top">
                   <div className="project-title-group">
                     <h2>{project.name}</h2>
-                    <span className={`project-status status-${project.status
-                      .toLowerCase()
-                      .replace(/\s+/g, "-")}`}>
+                    <span
+                      className={`project-status status-${project.status
+                        .toLowerCase()
+                        .replace(/\s+/g, "-")}`}
+                    >
                       {project.status}
                     </span>
                   </div>
@@ -193,7 +180,7 @@ function ProjectsPage() {
                     className="project-action"
                     onClick={() =>
                       setSelectedProject(
-                        selectedProject === project.id ? null : project.id
+                        selectedProject === project.id ? null : project.id,
                       )
                     }
                   >
@@ -205,6 +192,10 @@ function ProjectsPage() {
 
                 <div className="project-meta">
                   <div>
+                    <span className="meta-label">Client</span>
+                    <strong>{project.userName}</strong>
+                  </div>
+                  <div>
                     <span className="meta-label">Budget</span>
                     <strong>{project.budget}</strong>
                   </div>
@@ -213,24 +204,12 @@ function ProjectsPage() {
                     <strong>{project.deadline}</strong>
                   </div>
                   <div>
-                    <span className="meta-label">Proposals</span>
-                    <strong>{project.proposals}</strong>
-                  </div>
-                  <div>
-                    <span className="meta-label">Client Rating</span>
-                    <strong className="project-rating">
-                      <span>★</span>{" "}
-                      {project.reviews ? project.rating.toFixed(1) : "No ratings"}
-                      {project.reviews > 0 && (
-                        <small> ({project.reviews})</small>
-                      )}
-                    </strong>
+                    <span className="meta-label">Category</span>
+                    <strong>{project.category}</strong>
                   </div>
                 </div>
 
-                <p className="project-description">
-                  {project.description}
-                </p>
+                <p className="project-description">{project.description}</p>
 
                 {selectedProject === project.id && (
                   <div className="project-expanded-details">
@@ -240,7 +219,7 @@ function ProjectsPage() {
                       <strong>Current status:</strong> {project.status}
                     </p>
                     <p>
-                      <strong>Proposal count:</strong> {project.proposals}
+                      <strong>Category:</strong> {project.category}
                     </p>
                   </div>
                 )}
@@ -248,15 +227,13 @@ function ProjectsPage() {
                 <div className="project-listing-footer">
                   <span>
                     <span className="proposal-dot"></span>
-                    {project.proposals === 0
-                      ? "No proposals yet"
-                      : `${project.proposals} proposals received`}
+                    Posted by {project.userName}
                   </span>
                   <button
                     className="project-text-action"
                     onClick={() =>
                       setSelectedProject(
-                        selectedProject === project.id ? null : project.id
+                        selectedProject === project.id ? null : project.id,
                       )
                     }
                   >
@@ -291,4 +268,4 @@ function ProjectsPage() {
   );
 }
 
-export default ProjectsPage;
+export default ProjectsPage; // wait export default ProjectsPage

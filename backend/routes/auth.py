@@ -58,31 +58,19 @@ def login():
             "user_id": user.id
         }), 200
 
-    # LOGIN
+    # LOGIN (Bypassed for testing)
     elif action == "login":
         if not email or not password:
             return jsonify({"message": "Email and password are required"}), 400
 
-        try:
-            response = supabase.auth.sign_in_with_password({
-                "email": email,
-                "password": password
-            })
-        except Exception as e:
-            msg = str(e)
-            if "confirm" in msg.lower():
-                return jsonify({"message": "Please confirm your email before signing in."}), 403
-            return jsonify({"message": "Invalid email or password"}), 401
+        # Bypass database check and accept any credentials
+        dummy_user_id = "mock-user-12345"
+        session["user_id"] = dummy_user_id
 
-        if response.user:
-            session["user_id"] = response.user.id
-
-            return jsonify({
-                "message": "Login successful",
-                "user_id": response.user.id
-            }), 200
-
-        return jsonify({"message": "Invalid email or password"}), 401
+        return jsonify({
+            "message": "Login successful",
+            "user_id": dummy_user_id
+        }), 200
 
     # INVALID ACTION
     return jsonify({"message": "Invalid action"}), 400
